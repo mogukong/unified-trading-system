@@ -1,308 +1,402 @@
-# Unified Trading System v3.2
+# 🎯 统一交易系统 v3.2
 
-A sophisticated Binance Futures automated trading system with multi-dimensional analysis and intelligent position management.
+**全自动Binance期货量化交易系统 - 多维度分析 + 智能仓位管理**
 
-## 🚀 Features
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-- **Multi-Dimensional Scoring**: 8+ dimensions for comprehensive signal analysis
-- **OI Flow Detection**: Smart money tracking and phase identification
-- **Trend Confirmation**: EMA + MACD + Bollinger + Volume resonance
-- **Smart Position Management**: Trailing TP, position replacement, risk limits
-- **Real-time Monitoring**: Telegram notifications and automated reviews
+## ✨ 核心特性
 
-## 📦 Quick Start
+- 🎯 **多维度评分系统** - OI资金流 + 成交量 + EMA + MACD + 布林带 + 支撑阻力
+- 🔄 **回调vs反转分析** - 5维度判断下跌是回调还是反转，避免逆势操作
+- 📈 **上涨质量分析** - 5维度评估上涨健康度，避免追高
+- 🚀 **三种启动模式** - 清洗后反转 / 静默积累 / 无量启动
+- 🛡️ **智能风控** - 物理止损 + 追踪止盈 + 仓位替换 + 冷却机制
+- 📱 **Telegram推送** - 实时通知开仓/平仓/止盈/止损
+- 🔄 **自动复盘** - 6小时/每日自动复盘分析
+
+## 📊 系统流程
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    数据收集层                                │
+├─────────────────────────────────────────────────────────────┤
+│  Binance API                                                │
+│  ├─ K线数据 (1h/4h)                                        │
+│  ├─ OI持仓量                                               │
+│  ├─ 资金费率                                               │
+│  ├─ 多空比                                                 │
+│  └─ 成交量                                                 │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    指标计算层                                │
+├─────────────────────────────────────────────────────────────┤
+│  技术指标                                                   │
+│  ├─ EMA (7/20/50/55)                                       │
+│  ├─ MACD (DIF/DEA/柱状图)                                  │
+│  ├─ RSI (14周期)                                           │
+│  ├─ 布林带 (20周期)                                        │
+│  ├─ 成交量分析                                             │
+│  └─ 支撑阻力位                                             │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    信号扫描层                                │
+├─────────────────────────────────────────────────────────────┤
+│  三级扫描系统                                               │
+│  ├─ Tier1 (15分钟) - Top300 → Top100                       │
+│  ├─ Tier2 (10分钟) - Top100 → Top50                        │
+│  ├─ Tier3 (5分钟)  - Top50 → Top5                          │
+│  ├─ 爆发检测 (5分钟) - 24h Ticker分析                      │
+│  └─ 关注列表 (5分钟) - 已检测币种重扫                       │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    评分系统层                                │
+├─────────────────────────────────────────────────────────────┤
+│  做多评分 (100分制)                                         │
+│  ├─ 价格动量 (20分)                                        │
+│  ├─ OI资金流 (25分)                                        │
+│  ├─ 成交量 (12分)                                          │
+│  ├─ 资金费率 (10分)                                        │
+│  ├─ 多空比 (10分)                                          │
+│  ├─ RSI (8分)                                              │
+│  ├─ EMA多周期 (±10分)                                      │
+│  ├─ MACD (±10分)                                           │
+│  ├─ 布林带 (±8分)                                          │
+│  ├─ 量价配合 (±8分)                                        │
+│  ├─ 支撑阻力 (±8分)                                        │
+│  └─ 箱体整理 (±5分)                                        │
+│                                                             │
+│  做空评分 (100分制)                                         │
+│  ├─ 价格弱势 (25分)                                        │
+│  ├─ EMA趋势 (12分)                                        │
+│  ├─ OI背离 (20分)                                          │
+│  ├─ 资金费率 (15分)                                        │
+│  ├─ 多空比 (10分)                                          │
+│  ├─ RSI (10分)                                             │
+│  ├─ 成交量 (18分)                                          │
+│  ├─ MACD (±10分)                                           │
+│  ├─ 布林带 (±8分)                                          │
+│  ├─ 量价配合 (±8分)                                        │
+│  ├─ 支撑阻力 (±8分)                                        │
+│  └─ 箱体整理 (±5分)                                        │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    高级分析层                                │
+├─────────────────────────────────────────────────────────────┤
+│  回调vs反转分析 (5维度)                                     │
+│  ├─ OI+价格组合                                            │
+│  │   ├─ OI增+价格跌 = 新资金抄底 (回调)                    │
+│  │   └─ OI减+价格跌 = 获利了结 (反转)                      │
+│  ├─ 资金费率成本                                           │
+│  │   └─ 负费率 = 做空成本高                                │
+│  ├─ 大户多空比                                             │
+│  │   └─ 大户偏多 = 聪明钱看多                              │
+│  ├─ 散户情绪                                               │
+│  │   └─ 散户极度看多 = 过热                                │
+│  └─ 成交量恐慌度                                           │
+│      └─ 缩量下跌 = 正常回调                                │
+│                                                             │
+│  上涨质量分析 (5维度)                                       │
+│  ├─ OI+价格组合                                            │
+│  │   └─ OI增+价格涨 = 新资金进场 (健康)                    │
+│  ├─ 资金费率成本                                           │
+│  ├─ 大户多空比                                             │
+│  ├─ 散户情绪                                               │
+│  └─ 成交量确认                                             │
+│      └─ 放量上涨 = 健康                                    │
+│                                                             │
+│  启动模式检测 (3种)                                         │
+│  ├─ 清洗后反转                                             │
+│  │   └─ 前6h跌≥8% + 高波动 + 放量启动 + 价格企稳          │
+│  ├─ 静默积累                                               │
+│  │   └─ 窄幅震荡 + 成交量萎缩 + 突破放量 + 破前高         │
+│  └─ 无量启动                                               │
+│      └─ 低量比≥0.5 + OI不降 + 连续上涨2根                 │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    仓位管理层                                │
+├─────────────────────────────────────────────────────────────┤
+│  开仓                                                       │
+│  ├─ 评分≥70 (做多) / 评分≥60 (做空)                        │
+│  ├─ 物理止损单 (8%)                                        │
+│  ├─ 仓位大小: 20%                                          │
+│  └─ 杠杆: 10x                                              │
+│                                                             │
+│  监控                                                       │
+│  ├─ 实时盈亏追踪                                           │
+│  ├─ 峰值盈亏记录                                           │
+│  └─ 追踪止盈激活                                           │
+│                                                             │
+│  退出                                                       │
+│  ├─ 分批止盈: +40%时卖出50%                                │
+│  ├─ 追踪止盈: 峰值-15%触发                                 │
+│  ├─ 止损触发: -8%                                          │
+│  └─ 评分离场: <55分                                        │
+│                                                             │
+│  替换                                                       │
+│  ├─ 弱势仓位检测                                           │
+│  ├─ 更强信号出现                                           │
+│  └─ 自动替换 (可配置)                                      │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    风险控制层                                │
+├─────────────────────────────────────────────────────────────┤
+│  仓位限制                                                   │
+│  ├─ 最多4个做多仓位                                        │
+│  ├─ 最多4个做空仓位                                        │
+│  └─ 每仓位20%                                              │
+│                                                             │
+│  亏损限制                                                   │
+│  ├─ 单笔止损: 8%                                           │
+│  ├─ 日亏损上限: 100% (可配置)                              │
+│  └─ 最大回撤: 50%                                          │
+│                                                             │
+│  冷却机制                                                   │
+│  ├─ 同币种: 2小时冷却                                      │
+│  ├─ 连续亏损: 2次后冷却                                    │
+│  └─ 价格保护: 4h跌>20%不做空                               │
+│                                                             │
+│  紧急处理                                                   │
+│  ├─ 止损失败 → 立即平仓                                    │
+│  ├─ API错误 → 重试3次                                      │
+│  └─ 手动覆盖可用                                           │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    通知系统层                                │
+├─────────────────────────────────────────────────────────────┤
+│  Telegram通知                                               │
+│  ├─ 🟢 开仓通知                                            │
+│  ├─ 🔴 平仓/止损通知                                       │
+│  ├─ 💰 止盈通知                                            │
+│  └─ 📊 持仓报告                                            │
+│                                                             │
+│  定期报告                                                   │
+│  ├─ 📊 30分钟状态更新                                      │
+│  ├─ 📈 每日总结                                            │
+│  └─ 🔍 每周复盘                                            │
+│                                                             │
+│  警报                                                       │
+│  ├─ ⚠️ 风险警告                                            │
+│  ├─ 🚨 紧急警报                                            │
+│  └─ 📢 信号检测                                            │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    复盘系统层                                │
+├─────────────────────────────────────────────────────────────┤
+│  6小时复盘                                                  │
+│  ├─ 交易表现分析                                           │
+│  ├─ 胜率统计                                               │
+│  ├─ 盈亏分析                                               │
+│  └─ 策略优化建议                                           │
+│                                                             │
+│  每日复盘 (23:00)                                           │
+│  ├─ 全天总结                                               │
+│  ├─ 最佳表现                                               │
+│  ├─ 最差表现                                               │
+│  └─ 次日策略                                               │
+│                                                             │
+│  健康检查                                                   │
+│  ├─ 系统状态                                               │
+│  ├─ API连接                                                │
+│  ├─ 内存使用                                               │
+│  └─ 错误率                                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 🚀 快速开始
+
+### 1. 安装
 
 ```bash
-# Clone repository
+# 克隆仓库
 git clone https://github.com/mogukong/unified-trading-system.git
 cd unified-trading-system
 
-# Install dependencies
+# 运行安装脚本
 bash install.sh
-
-# Configure API keys
-cp .env.example .env
-nano .env
-
-# Start system
-python3 unified_engine.py --loop
 ```
 
-## ⚙️ Configuration
+### 2. 配置
 
-Edit `.env` file with your API keys:
+```bash
+# 编辑API配置
+cp .env.example .env
+nano .env
+```
+
+填入你的API密钥:
 
 ```env
-BINANCE_API_KEY=your_binance_api_key
-BINANCE_API_SECRET=your_binance_api_secret
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TG_CHAT_ID=your_telegram_chat_id
+BINANCE_API_KEY=你的币安API密钥
+BINANCE_API_SECRET=你的币安API密钥
+TELEGRAM_BOT_TOKEN=你的Telegram Bot Token
+TG_CHAT_ID=你的Telegram Chat ID
 TG_PROXY=http://127.0.0.1:1080
 ```
 
-## 📊 System Workflow
+### 3. 启动
 
-### 1. Data Collection
-```
-┌─────────────────┐
-│  Binance API    │
-│  - Klines (1h)  │
-│  - OI History   │
-│  - Funding Rate │
-│  - Long/Short   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Data Pipeline  │
-│  - Clean        │
-│  - Normalize    │
-│  - Calculate    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Indicators     │
-│  - EMA (7/20/50)│
-│  - MACD         │
-│  - RSI          │
-│  - Bollinger    │
-│  - Volume       │
-└─────────────────┘
+```bash
+# 测试运行
+python3 unified_engine.py
+
+# 后台运行
+python3 unified_engine.py --loop
+
+# 查看状态
+python3 unified_engine.py --status
 ```
 
-### 2. Signal Scanning
+## 📁 文件结构
+
 ```
-┌─────────────────────────────────────┐
-│         Three-Tier Scanning         │
-├─────────────────────────────────────┤
-│  Tier 1 (15min)                     │
-│  └─ Top 300 → Top 100              │
-│                                     │
-│  Tier 2 (10min)                     │
-│  └─ Top 100 → Top 50               │
-│                                     │
-│  Tier 3 (5min)                      │
-│  └─ Top 50 → Top 5                 │
-│                                     │
-│  Burst Detection (5min)             │
-│  └─ 24h Ticker Analysis            │
-│                                     │
-│  Watchlist Rescan (5min)            │
-│  └─ Previously Detected Coins      │
-└─────────────────────────────────────┘
+unified-trading-system/
+├── unified_engine.py       # 主引擎 (扫描+评分+执行)
+├── modes/                  # 评分模式
+│   ├── long_mode.py        # 做多评分 (8维度)
+│   ├── short_mode.py       # 做空评分 (6维度)
+│   └── oi_flow_analyzer.py # OI分析器
+├── notifier.py             # Telegram通知
+├── config.json             # 配置参数
+├── install.sh              # 安装脚本
+├── .env.example            # 配置模板
+├── SKILL.md                # 详细文档
+└── README.md               # 本文件
 ```
 
-### 3. Scoring System
-```
-┌─────────────────────────────────────┐
-│         Long Mode (100pts)          │
-├─────────────────────────────────────┤
-│  Price Momentum        │  20pts    │
-│  OI Flow               │  25pts    │
-│  Volume                │  12pts    │
-│  Funding Rate          │  10pts    │
-│  Long/Short Ratio      │  10pts    │
-│  RSI                   │   8pts    │
-│  EMA Multi-timeframe   │  ±10pts   │
-│  MACD                  │  ±10pts   │
-│  Bollinger Bands       │   ±8pts   │
-│  Volume Pattern        │   ±8pts   │
-│  Support/Resistance    │   ±8pts   │
-│  Consolidation Box     │   ±5pts   │
-└─────────────────────────────────────┘
+## ⚙️ 配置参数
 
-┌─────────────────────────────────────┐
-│        Short Mode (100pts)          │
-├─────────────────────────────────────┤
-│  Price Weakness        │  25pts    │
-│  EMA Trend             │  12pts    │
-│  OI Divergence         │  20pts    │
-│  Funding Rate          │  15pts    │
-│  Long/Short Ratio      │  10pts    │
-│  RSI                   │  10pts    │
-│  Volume                │  18pts    │
-│  MACD                  │  ±10pts   │
-│  Bollinger Bands       │   ±8pts   │
-│  Volume Pattern        │   ±8pts   │
-│  Support/Resistance    │   ±8pts   │
-│  Consolidation Box     │   ±5pts   │
-└─────────────────────────────────────┘
-```
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| entry_score (做多) | 70 | 做多入场最低评分 |
+| entry_score (做空) | 60 | 做空入场最低评分 |
+| stop_loss | 0.08 | 初始止损 (8%) |
+| trail_activate | 0.15 | 追踪止盈激活 (15%) |
+| trail_drawdown | 0.12 | 追踪止盈回撤 (12%) |
+| tp1_pct | 0.40 | 第一批止盈 (40%) |
+| tp1_sell | 0.50 | 第一批止盈卖出比例 (50%) |
+| max_positions | 4 | 每方向最大仓位数 |
+| position_pct | 0.20 | 每仓位资金比例 (20%) |
+| leverage | 10 | 杠杆倍数 |
 
-### 4. Advanced Analysis
-```
-┌─────────────────────────────────────┐
-│    Pullback vs Reversal Analysis    │
-├─────────────────────────────────────┤
-│  Dimension 1: OI + Price Combo      │
-│  - OI↑ + Price↓ = New Capital Dip  │
-│  - OI↓ + Price↓ = Profit Taking    │
-│                                     │
-│  Dimension 2: Funding Rate Cost     │
-│  - Negative = High Short Cost       │
-│  - Positive = High Long Cost        │
-│                                     │
-│  Dimension 3: Whale Positioning     │
-│  - Whale Long > 60% = Bullish      │
-│  - Whale Short > 60% = Bearish     │
-│                                     │
-│  Dimension 4: Retail Sentiment      │
-│  - Retail > 2.0 = Overheated       │
-│  - Retail < 0.5 = Oversold         │
-│                                     │
-│  Dimension 5: Volume Panic          │
-│  - High Volume + Drop = Panic       │
-│  - Low Volume + Drop = Correction   │
-└─────────────────────────────────────┘
-```
+更多参数请查看 [config.json](config.json)
 
-### 5. Position Management
-```
-┌─────────────────────────────────────┐
-│         Position Lifecycle          │
-├─────────────────────────────────────┤
-│  Entry                              │
-│  ├─ Score ≥ 70 (Long)              │
-│  ├─ Score ≥ 60 (Short)             │
-│  ├─ Physical Stop-Loss (8%)        │
-│  └─ Position Size: 20%             │
-│                                     │
-│  Monitoring                         │
-│  ├─ Real-time PnL Tracking         │
-│  ├─ Peak PnL Recording             │
-│  └─ Trailing Stop Activation       │
-│                                     │
-│  Exit                               │
-│  ├─ Take Profit 1: +40% (50% sell) │
-│  ├─ Trailing Stop: Peak -15%       │
-│  ├─ Stop-Loss Hit: -8%             │
-│  └─ Score Drop: < 55               │
-│                                     │
-│  Replacement                        │
-│  ├─ Weak Position Detected         │
-│  ├─ Stronger Signal Found          │
-│  └─ Auto Replace if Enabled        │
-└─────────────────────────────────────┘
-```
+## 📊 评分维度
 
-### 6. Risk Management
-```
-┌─────────────────────────────────────┐
-│         Risk Controls               │
-├─────────────────────────────────────┤
-│  Position Limits                    │
-│  ├─ Max 4 Long Positions           │
-│  ├─ Max 4 Short Positions          │
-│  └─ 20% per Position               │
-│                                     │
-│  Loss Limits                        │
-│  ├─ Stop-Loss: 8% per Trade        │
-│  ├─ Daily Loss: 100% (configurable)│
-│  └─ Max Drawdown: 50%              │
-│                                     │
-│  Cooldown                           │
-│  ├─ Same Coin: 2 hours             │
-│  ├─ Consecutive Loss: 2 times      │
-│  └─ Price Protection: 4h > 20%     │
-│                                     │
-│  Emergency                          │
-│  ├─ Stop-Loss Fail → Close         │
-│  ├─ API Error → Retry 3x           │
-│  └─ Manual Override Available      │
-└─────────────────────────────────────┘
-```
+### 做多评分 (100分制)
 
-### 7. Notification System
-```
-┌─────────────────────────────────────┐
-│         Telegram Notifications      │
-├─────────────────────────────────────┤
-│  Trade Events                       │
-│  ├─ 🟢 Position Opened             │
-│  ├─ 🔴 Position Closed             │
-│  ├─ 💰 Take Profit Hit             │
-│  └─ 🛑 Stop-Loss Hit               │
-│                                     │
-│  Periodic Reports                   │
-│  ├─ 📊 30-min Status Update        │
-│  ├─ 📈 Daily Summary               │
-│  └─ 🔍 Weekly Review               │
-│                                     │
-│  Alerts                             │
-│  ├─ ⚠️ Risk Warning                │
-│  ├─ 🚨 Emergency Alert             │
-│  └─ 📢 Signal Detected             │
-└─────────────────────────────────────┘
-```
+| 维度 | 分数 | 说明 |
+|------|------|------|
+| 价格动量 | 20分 | 24h/4h涨幅 |
+| OI资金流 | 25分 | OI变化+价格组合 |
+| 成交量 | 12分 | 量比+放量确认 |
+| 资金费率 | 10分 | 费率成本 |
+| 多空比 | 10分 | 大户/散户多空比 |
+| RSI | 8分 | 超买超卖 |
+| EMA多周期 | ±10分 | EMA排列+斜率 |
+| MACD | ±10分 | 金叉死叉+柱状图 |
+| 布林带 | ±8分 | %B位置+挤压 |
+| 量价配合 | ±8分 | 量价背离/确认 |
+| 支撑阻力 | ±8分 | 接近支撑/阻力 |
+| 箱体整理 | ±5分 | 箱体位置+突破 |
 
-### 8. Automated Review
-```
-┌─────────────────────────────────────┐
-│         Review System               │
-├─────────────────────────────────────┤
-│  6-Hour Review                      │
-│  ├─ Trade Performance              │
-│  ├─ Win Rate Analysis              │
-│  ├─ PnL Breakdown                  │
-│  └─ Strategy Optimization          │
-│                                     │
-│  Daily Review (23:00)               │
-│  ├─ Full Day Summary               │
-│  ├─ Top Performers                 │
-│  ├─ Worst Performers               │
-│  └─ Next Day Strategy              │
-│                                     │
-│  Health Check                       │
-│  ├─ System Status                  │
-│  ├─ API Connection                 │
-│  ├─ Memory Usage                   │
-│  └─ Error Rate                     │
-└─────────────────────────────────────┘
-```
+### 做空评分 (100分制)
 
-## 📈 Performance Metrics
+| 维度 | 分数 | 说明 |
+|------|------|------|
+| 价格弱势 | 25分 | 24h/4h跌幅 |
+| EMA趋势 | 12分 | EMA空头排列 |
+| OI背离 | 20分 | OI变化+价格组合 |
+| 资金费率 | 15分 | 费率成本 |
+| 多空比 | 10分 | 大户/散户多空比 |
+| RSI | 10分 | 超买超卖 |
+| 成交量 | 18分 | 量比+放量确认 |
+| MACD | ±10分 | 金叉死叉+柱状图 |
+| 布林带 | ±8分 | %B位置+挤压 |
+| 量价配合 | ±8分 | 量价背离/确认 |
+| 支撑阻力 | ±8分 | 接近支撑/阻力 |
+| 箱体整理 | ±5分 | 箱体位置+突破 |
 
-Based on 7-day backtesting:
+## 📈 回测表现
 
-| Metric | Value |
-|--------|-------|
-| Long Win Rate | 28% |
-| Short Win Rate | 18% |
-| Best Exit Type | Trailing TP (+48U) |
-| Worst Exit Type | Auto Close (-655U) |
-| Optimal Hold Time | >12 hours |
-| Average Win | +10.65U |
-| Average Loss | -7.21U |
+| 指标 | 做多 | 做空 |
+|------|------|------|
+| 胜率 | 28% | 18% |
+| 平均盈利 | +10.65U | +15.63U |
+| 平均亏损 | -7.21U | -18.12U |
+| 最佳退出 | Trailing TP | Trailing TP |
+| 最差退出 | Auto Close | Auto Close |
+| 最优持仓时间 | >12小时 | >12小时 |
 
-## 🛡️ Risk Management
+## 📱 Telegram通知
 
-- **Physical Stop-Loss**: Via Binance Algo Orders
-- **Trailing Take-Profit**: Configurable activation and drawdown
-- **Position Replacement**: Auto-replace weak performers
-- **Daily Loss Limit**: Configurable (default 100%)
-- **Cooldown System**: 2-hour cooldown after consecutive losses
+配置Telegram后，系统会自动推送:
 
-## 📖 Documentation
+- 🟢 **开仓通知** - 币种、方向、评分、价格
+- 🔴 **平仓通知** - 盈亏、持仓时间、退出类型
+- 💰 **止盈通知** - 分批止盈、追踪止盈
+- 🛑 **止损通知** - 止损触发、亏损金额
+- 📊 **状态报告** - 30分钟持仓更新
+- 📈 **每日总结** - 全天交易统计
+- 🔍 **复盘报告** - 策略优化建议
 
-- [SKILL.md](SKILL.md) - Complete system documentation
-- [SYSTEM_FLOW.md](SYSTEM_FLOW.md) - System architecture
-- [config.json](config.json) - Configuration parameters
+## 🛡️ 风险管理
 
-## ⚠️ Risk Warning
+### 止损机制
 
-**This is a high-risk trading system. Use at your own risk.**
+1. **物理止损单** - 通过Binance Algo Order API挂单
+2. **追踪止盈** - 盈利15%后启动，回撤12%触发
+3. **分批止盈** - 盈利40%时卖出50%
+4. **评分离场** - 评分降至55分以下离场
 
-- Past performance does not guarantee future results
-- Always use proper risk management
-- Never invest more than you can afford to lose
-- Test thoroughly on paper trading first
-- Monitor the system regularly
+### 仓位管理
 
-## 📄 License
+- 最多4个做多仓位
+- 最多4个做空仓位
+- 每仓位20%资金
+- 10x杠杆
+
+### 冷却机制
+
+- 同币种连续亏损2次 → 冷却2小时
+- 4小时跌幅>20% → 不开空
+- 4小时涨幅>30% → 不开多
+
+## 📖 文档
+
+- [SKILL.md](SKILL.md) - 完整系统文档
+- [config.json](config.json) - 配置参数详解
+
+## ⚠️ 风险提示
+
+**这是高风险交易系统，使用风险自负。**
+
+- 过往表现不代表未来收益
+- 请使用适当的风险管理
+- 不要投入超过你能承受损失的资金
+- 请先在模拟盘测试
+- 定期监控系统运行状态
+
+## 📄 许可证
 
 MIT License
 
 ---
 
-**Version**: 3.2.0 | **Last Updated**: 2026-06-14
+**版本**: 3.2.0 | **更新日期**: 2026-06-14
