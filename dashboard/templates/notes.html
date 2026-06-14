@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Notes - Demon Coin Detector{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-journal-text"></i> Reflections & Notes</h2>
+    <div class="d-flex gap-2">
+        <select class="form-select form-select-sm" style="width: auto;" id="filterRating" onchange="filterNotes()">
+            <option value="">All Ratings</option>
+            <option value="5">★★★★★ Excellent</option>
+            <option value="4">★★★★☆ Good</option>
+            <option value="3">★★★☆☆ Average</option>
+            <option value="2">★★☆☆☆ Below Avg</option>
+            <option value="1">★☆☆☆☆ Poor</option>
+        </select>
+        <input type="text" class="form-control form-control-sm" style="width: 200px;" id="searchNotes" placeholder="Search notes..." onkeyup="filterNotes()">
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Total Notes</div>
+            <div class="stat-value">{{ stats.total|default(reflections|default([])|length) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Avg Rating</div>
+            <div class="stat-value text-warning">
+                {% if stats.avg_rating|default(0) %}
+                {{ "%.1f"|format(stats.avg_rating) }}
+                {% else %}-{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Positive (4-5★)</div>
+            <div class="stat-value">{{ stats.positive|default(0) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">With Lessons</div>
+            <div class="stat-value">
+                {% set ns = namespace(count=0) %}
+                {% for r in reflections|default([]) %}
+                    {% if r.lesson|default('') %}{% set ns.count = ns.count + 1 %}{% endif %}
+                {% endfor %}
+                {{ ns.count }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notes List -->
+<div class="row g-3" id="notesContainer">
+    {% for r in reflections|default([]) %}
+    <div class="col-lg-6 note-item" data-rating="{{ r.rating|default(0) }}" data-content="{{ r.content|default('')|lower }}" data-lesson="{{ r.lesson|default('')|lower }}">
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <a href="/trade/{{ r.trade_id|default(0) }}" class="fw-bold">
+                        {{ r.symbol|default('Trade') }} #{{ r.trade_id|default(0) }}
+                    </a>
+                    {% if r.direction|default('') %}
+                    <span class="badge badge-{{ r.direction|lower }} ms-1">{{ r.direction }}</span>
+                    {% endif %}
+                    {% set dt = r.entry_time|default('') %}{% if dt %}<span class="text-muted small ms-2">{{ dt[:10] }}</span>{% endif %}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    {% if r.rating|default(0) %}
+                    <span class="text-warning">
+                        {% for i in range(r.rating) %}★{% endfor %}{% for i in range(5 - r.rating) %}☆{% endfor %}
+                    </span>
+                    {% endif %}
+                    {% set pnl = r.pnl_usd|default(0) %}
+                    <span class="{% if pnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %} small fw-bold">
+                        {% if pnl >= 0 %}+${{ "%.2f"|format(pnl) }}{% else %}-${{ "%.2f"|format(pnl|abs) }}{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <p class="mt-2 mb-1">{{ r.content|default('') }}</p>
+
+            {% if r.lesson|default('') %}
+            <div class="mt-2 p-2 rounded" style="background: rgba(100,181,246,0.1);">
+                <small class="text-info"><i class="bi bi-lightbulb"></i> <strong>Lesson:</strong> {{ r.lesson }}</small>
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <small class="text-muted">{{ r.created_at|default('') }}</small>
+                <div>
+                    <button class="btn btn-sm text-muted p-0 me-2" onclick="editReflection({{ r.id|default(0) }}, '{{ r.content|default('')|e }}', {{ r.rating|default('null') }}, '{{ r.lesson|default('')|e }}')" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm text-muted p-0" onclick="deleteNote({{ r.id|default(0) }})" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not reflections|default([]) %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-journal-text" style="font-size: 3rem;"></i>
+    <p class="mt-2">No reflections yet. Add notes to your trades to see them here.</p>
+    <a href="/trades" class="btn btn-outline-info btn-sm">Browse Trades</a>
+</div>
+{% endif %}
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: #16213e;">
+            <div class="modal-header" style="border-color: #1a365d;">
+                <h6 class="modal-title">Edit Reflection</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editId">
+                <div class="mb-3">
+                    <label class="form-label small">Content</label>
+                    <textarea class="form-control" id="editContent" rows="3"></textarea>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small">Rating</label>
+                        <select class="form-select" id="editRating">
+                            <option value="">-</option>
+                            <option value="1">1 - Poor</option>
+                            <option value="2">2 - Below Avg</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Lesson</label>
+                        <input type="text" class="form-control" id="editLesson">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-color: #1a365d;">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-outline-info btn-sm" onclick="saveEditReflection()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterNotes() {
+    var rating = document.getElementById('filterRating').value;
+    var search = document.getElementById('searchNotes').value.toLowerCase();
+    document.querySelectorAll('.note-item').forEach(function(el) {
+        var matchRating = !rating || el.dataset.rating === rating;
+        var matchSearch = !search || el.dataset.content.indexOf(search) >= 0 || el.dataset.lesson.indexOf(search) >= 0;
+        el.style.display = (matchRating && matchSearch) ? '' : 'none';
+    });
+}
+
+function editReflection(id, content, rating, lesson) {
+    document.getElementById('editId').value = id;
+    document.getElementById('editContent').value = content;
+    document.getElementById('editRating').value = rating || '';
+    document.getElementById('editLesson').value = lesson || '';
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+function saveEditReflection() {
+    var id = document.getElementById('editId').value;
+    var content = document.getElementById('editContent').value.trim();
+    if (!content) return alert('Content required');
+    fetch('/api/reflection/' + id, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            content: content,
+            rating: document.getElementById('editRating').value ? parseInt(document.getElementById('editRating').value) : null,
+            lesson: document.getElementById('editLesson').value.trim() || null
+        })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok || d.success) location.reload();
+        else alert(d.error || 'Failed');
+    });
+}
+
+function deleteNote(id) {
+    if (!confirm('Delete this reflection?')) return;
+    fetch('/api/reflection/' + id, { method: 'DELETE' })
+        .then(function(r) { return r.json(); }).then(function(d) {
+            if (d.ok || d.success) location.reload();
+            else alert(d.error || 'Failed');
+        });
+}
+</script>
+{% endblock %}

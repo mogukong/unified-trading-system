@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Demon Coin Detector{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h2>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Total Trades</div>
+            <div class="stat-value">{{ stats.total|default(0) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value {% if stats.win_rate|default(0) >= 50 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                {{ "%.1f"|format(stats.win_rate|default(0)) }}%
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Total PnL</div>
+            <div class="stat-value {% if stats.total_pnl|default(0) >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                ${{ "%.2f"|format(stats.total_pnl|default(0)) }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Avg PnL %</div>
+            <div class="stat-value {% if stats.avg_pct|default(0) >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                {{ "%.2f"|format(stats.avg_pct|default(0)) }}%
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Winning Trades</div>
+            <div class="stat-value pnl-positive">{{ stats.wins|default(0) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Losing Trades</div>
+            <div class="stat-value pnl-negative">{{ stats.losses|default(0) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Best Trade</div>
+            <div class="stat-value pnl-positive">${{ "%.2f"|format(stats.best_trade|default(0)) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-label">Worst Trade</div>
+            <div class="stat-value pnl-negative">${{ "%.2f"|format(stats.worst_trade|default(0)) }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card p-3">
+            <h6 class="mb-3"><i class="bi bi-graph-up"></i> Cumulative PnL</h6>
+            <div class="chart-container"><canvas id="cumulativePnlChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-3">
+            <h6 class="mb-3"><i class="bi bi-pie-chart"></i> Win / Loss</h6>
+            <div class="chart-container"><canvas id="winLossChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6 class="mb-3"><i class="bi bi-bar-chart"></i> Monthly PnL</h6>
+            <div class="chart-container"><canvas id="monthlyPnlChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6 class="mb-3"><i class="bi bi-arrow-left-right"></i> PnL by Direction</h6>
+            <div class="chart-container"><canvas id="directionChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Symbols -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card p-3">
+            <h6 class="mb-3"><i class="bi bi-trophy"></i> Top Symbols by PnL</h6>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead><tr><th>Symbol</th><th>Trades</th><th>Win Rate</th><th>Total PnL</th></tr></thead>
+                    <tbody>
+                        {% for s in top_symbols|default([]) %}
+                        <tr>
+                            <td><strong>{{ s.symbol|default('') }}</strong></td>
+                            <td>{{ s.trades|default(0) }}</td>
+                            <td class="{% if s.trades|default(0) > 0 and (s.wins|default(0) / s.trades * 100) >= 50 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                                {% if s.trades|default(0) > 0 %}{{ "%.1f"|format(s.wins|default(0) / s.trades * 100) }}%{% else %}0%{% endif %}
+                            </td>
+                            <td class="{% if s.pnl|default(0) >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                                ${{ "%.2f"|format(s.pnl|default(0)) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Trades -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card p-3">
+            <h6 class="mb-3"><i class="bi bi-clock-history"></i> Recent Trades</h6>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr><th>Date</th><th>Symbol</th><th>Direction</th><th>Score</th><th>PnL</th><th>Exit Type</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for t in recent|default([]) %}
+                        <tr style="cursor:pointer" onclick="location.href='/trade/{{ t.id|default(0) }}'">
+                            <td>{% set dt = t.entry_time|default('') %}{% if dt %}{{ dt[:10] }}{% else %}-{% endif %}</td>
+                            <td><strong>{{ t.symbol|default('') }}</strong></td>
+                            <td><span class="badge badge-{{ t.direction|default('')|lower }}">{{ t.direction|default('-') }}</span></td>
+                            <td>{% if t.total_score is defined and t.total_score is not none %}<span class="badge bg-secondary">{{ "%.0f"|format(t.total_score) }}</span>{% else %}-{% endif %}</td>
+                            <td class="{% if t.pnl_usd|default(0) >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">${{ "%.2f"|format(t.pnl_usd|default(0)) }}</td>
+                            <td><span class="badge bg-dark">{{ t.exit_type|default('-') }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not recent|default([]) %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">No trades yet</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Cumulative PnL chart
+(function() {
+    var cumData = {{ cumulative|default([])|tojson }};
+    if (cumData.length > 0) {
+        new Chart(document.getElementById('cumulativePnlChart'), {
+            type: 'line',
+            data: {
+                labels: cumData.map(function(d) { return d.date || ''; }),
+                datasets: [{
+                    label: 'Cumulative PnL',
+                    data: cumData.map(function(d) { return d.pnl || 0; }),
+                    borderColor: '#64b5f6',
+                    backgroundColor: 'rgba(100,181,246,0.1)',
+                    fill: true, tension: 0.3, pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }
+            }
+        });
+    }
+})();
+
+// Win/Loss pie
+new Chart(document.getElementById('winLossChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Wins', 'Losses'],
+        datasets: [{ data: [{{ stats.wins|default(0) }}, {{ stats.losses|default(0) }}], backgroundColor: ['#00c853', '#ff1744'], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%' }
+});
+
+// Monthly PnL bar chart
+(function() {
+    var monthlyData = {{ monthly|default([])|tojson }};
+    if (monthlyData.length > 0) {
+        new Chart(document.getElementById('monthlyPnlChart'), {
+            type: 'bar',
+            data: {
+                labels: monthlyData.map(function(d) { return d.month || ''; }),
+                datasets: [{
+                    label: 'Monthly PnL',
+                    data: monthlyData.map(function(d) { return d.pnl || 0; }),
+                    backgroundColor: monthlyData.map(function(d) { return (d.pnl || 0) >= 0 ? '#00c853' : '#ff1744'; }),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }
+            }
+        });
+    }
+})();
+
+// Direction chart
+(function() {
+    var dirData = {{ by_direction|default([])|tojson }};
+    if (dirData.length > 0) {
+        new Chart(document.getElementById('directionChart'), {
+            type: 'bar',
+            data: {
+                labels: dirData.map(function(d) { return d.direction || ''; }),
+                datasets: [{
+                    label: 'PnL',
+                    data: dirData.map(function(d) { return d.pnl || 0; }),
+                    backgroundColor: ['#2196f3', '#ff9800'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                indexAxis: 'y'
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

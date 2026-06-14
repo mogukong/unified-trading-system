@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-06-09T17:37:48.477788",
+  "stats": {
+    "v2.0": {
+      "total": 970,
+      "pattern_count": 49,
+      "high_score": 132,
+      "accuracy": 52.27272727272727,
+      "pattern_stats": {
+        "trend_weak": {
+          "count": 33,
+          "avg_future": 0.3634242102210576,
+          "accuracy": 51.515151515151516
+        },
+        "oi_diverge": {
+          "count": 16,
+          "avg_future": -1.848406269959996,
+          "accuracy": 50.0
+        }
+      }
+    },
+    "v2.1": {
+      "total": 970,
+      "pattern_count": 272,
+      "high_score": 223,
+      "accuracy": 49.327354260089685,
+      "pattern_stats": {
+        "trend_weak": {
+          "count": 47,
+          "avg_future": 0.0848140206899796,
+          "accuracy": 48.93617021276596
+        },
+        "oi_diverge": {
+          "count": 50,
+          "avg_future": -0.9499067861078843,
+          "accuracy": 48.0
+        },
+        "breakdown": {
+          "count": 175,
+          "avg_future": 0.3434246318298454,
+          "accuracy": 52.0
+        }
+      }
+    },
+    "v2.2": {
+      "total": 970,
+      "pattern_count": 49,
+      "high_score": 253,
+      "accuracy": 49.80237154150198,
+      "pattern_stats": {
+        "trend_weak": {
+          "count": 33,
+          "avg_future": 0.3634242102210576,
+          "accuracy": 51.515151515151516
+        },
+        "oi_diverge": {
+          "count": 16,
+          "avg_future": -1.848406269959996,
+          "accuracy": 50.0
+        }
+      }
+    }
+  },
+  "best_version": "v2.0"
+}

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}Trade #{{ trade.id|default(0) }} - {{ trade.symbol|default('') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a href="/trades" class="text-muted me-2"><i class="bi bi-arrow-left"></i> Back</a>
+        <h2 class="d-inline">
+            <span class="badge badge-{{ trade.direction|default('')|lower }}">{{ trade.direction|default('-') }}</span>
+            {{ trade.symbol|default('') }}
+            <span class="text-muted fs-6">#{{ trade.id|default(0) }}</span>
+        </h2>
+    </div>
+    <div>
+        {% set pnl = trade.pnl_usd|default(0) %}
+        <span class="fs-3 fw-bold {% if pnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+            {% if pnl >= 0 %}+${{ "%.2f"|format(pnl) }}{% else %}-${{ "%.2f"|format(pnl|abs) }}{% endif %}
+        </span>
+        <span class="text-muted ms-2">({{ "%.2f"|format(trade.pnl_pct|default(0)) }}%)</span>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Left Column -->
+    <div class="col-lg-8">
+        <!-- Core Info -->
+        <div class="card p-3 mb-3">
+            <h6><i class="bi bi-info-circle"></i> Trade Information</h6>
+            <div class="row g-2 mt-1">
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Entry Time</small>
+                    <span>{{ trade.entry_time|default('-') }}</span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Exit Time</small>
+                    <span>{{ trade.exit_time|default('-') }}</span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Hold Duration</small>
+                    <span>{{ "%.1f"|format(trade.hold_hours|default(0)) }} hours</span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Exit Type</small>
+                    <span class="badge bg-dark">{{ trade.exit_type|default('-') }}</span>
+                </div>
+            </div>
+            <div class="row g-2 mt-2">
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Entry Price</small>
+                    <span>${{ "%.6f"|format(trade.entry_price|default(0)) }}</span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Exit Price</small>
+                    <span>${{ "%.6f"|format(trade.exit_price|default(0)) }}</span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Position Size</small>
+                    <span>${{ "%.2f"|format(trade.margin_usd|default(0)) }}</span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Leverage</small>
+                    <span>{{ trade.leverage|default('-') }}x</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scoring -->
+        {% if trade.total_score is defined and trade.total_score is not none %}
+        <div class="card p-3 mb-3">
+            <h6><i class="bi bi-bar-chart-line"></i> Score</h6>
+            <div class="row g-3 mt-1">
+                {% set score_dims = [
+                    ('Total Score', trade.total_score),
+                    ('Market Structure', trade.market_structure_score),
+                    ('Trend Alignment', trade.trend_alignment_score),
+                    ('Volume Profile', trade.volume_profile_score),
+                    ('Momentum', trade.momentum_score),
+                    ('Risk/Reward', trade.risk_reward_score),
+                    ('Timing', trade.timing_score),
+                    ('Confluence', trade.confluence_score),
+                    ('Liquidity', trade.liquidity_score),
+                    ('Volatility', trade.volatility_score)
+                ] %}
+                {% for name, score in score_dims %}
+                {% if score is defined and score is not none %}
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-between small">
+                        <span>{{ name }}</span>
+                        <span class="fw-bold">{{ "%.0f"|format(score) }}/100</span>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-fill" style="width:{{ score }}%; background:{% if score >= 70 %}#00c853{% elif score >= 40 %}#ff9800{% else %}#ff1744{% endif %};"></div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Factors from trade columns -->
+        <div class="card p-3 mb-3">
+            <h6><i class="bi bi-list-check"></i> Analysis Factors</h6>
+            <div class="row g-2 mt-1">
+                {% set factor_dims = [
+                    ('Trend Direction', trade.trend_direction),
+                    ('Higher TF Trend', trade.higher_tf_trend),
+                    ('Support/Resistance', trade.support_resistance),
+                    ('Volume Trend', trade.volume_trend),
+                    ('RSI State', trade.rsi_state),
+                    ('MACD Signal', trade.macd_signal),
+                    ('Bollinger Position', trade.bollinger_position),
+                    ('Candle Pattern', trade.candle_pattern),
+                    ('Market Regime', trade.market_regime),
+                    ('Funding Rate', trade.funding_rate_bias),
+                    ('Open Interest', trade.open_interest_change)
+                ] %}
+                {% for name, value in factor_dims %}
+                {% if value is defined and value %}
+                <div class="col-md-4">
+                    <small class="text-muted d-block">{{ name }}</small>
+                    <span class="badge bg-secondary">{{ value }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% if factors|default({}) %}
+            <div class="row g-2 mt-2">
+                {% for k, v in factors.items() %}
+                <div class="col-md-4">
+                    <small class="text-muted d-block">{{ k }}</small>
+                    <span class="badge bg-secondary">{{ v }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Entry Reasons -->
+        {% if reasons|default([]) %}
+        <div class="card p-3 mb-3">
+            <h6><i class="bi bi-check-circle"></i> Entry Reasons</h6>
+            <ul class="mb-0 mt-2">
+                {% for r in reasons %}
+                <li>{{ r }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Loss Analysis -->
+        {% if pnl < 0 %}
+        <div class="card p-3 mb-3" style="border-left: 3px solid #ff5252;">
+            <h6 class="pnl-negative"><i class="bi bi-exclamation-triangle"></i> Loss Analysis</h6>
+            <div class="row g-2 mt-1">
+                <div class="col-md-4">
+                    <small class="text-muted d-block">Loss Category</small>
+                    <span>{{ trade.loss_category|default('-') }}</span>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted d-block">Mistake Type</small>
+                    <span>{{ trade.mistake_type|default('-') }}</span>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted d-block">Avoidable</small>
+                    <span>{% if trade.was_avoidable|default(0) %}<span class="pnl-negative">Yes</span>{% else %}No{% endif %}</span>
+                </div>
+            </div>
+            {% if loss_tags|default([]) %}
+            <div class="mt-2">
+                <small class="text-muted">Loss Tags:</small><br>
+                {% for lt in loss_tags %}
+                <span class="badge bg-danger me-1">{{ lt }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-4">
+        <!-- Tags -->
+        <div class="card p-3 mb-3">
+            <h6><i class="bi bi-tags"></i> Tags</h6>
+            <div id="tradeTags" class="mb-2">
+                {% for tag in tags|default([]) %}
+                <span class="tag-chip me-1 mb-1" style="background:{{ tag.color|default('#333') }}; color:#fff;">
+                    {{ tag.icon|default('') }} {{ tag.name|default('') }}
+                    <span style="cursor:pointer;margin-left:4px;" onclick="removeTag({{ trade.id|default(0) }}, {{ tag.id|default(0) }})">&times;</span>
+                </span>
+                {% endfor %}
+                {% if not tags|default([]) %}<span class="text-muted small">No tags</span>{% endif %}
+            </div>
+            <div class="input-group input-group-sm">
+                <select class="form-select" id="tagSelect">
+                    <option value="">Add tag...</option>
+                    {% for tag in all_tags|default([]) %}
+                    <option value="{{ tag.id|default('') }}">{{ tag.icon|default('') }} {{ tag.name|default('') }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-outline-info" onclick="addTag({{ trade.id|default(0) }})"><i class="bi bi-plus"></i></button>
+            </div>
+        </div>
+
+        <!-- Reflections -->
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0"><i class="bi bi-journal-text"></i> Reflections</h6>
+                <button class="btn btn-sm btn-outline-info" onclick="document.getElementById('reflectionForm').style.display='block'">
+                    <i class="bi bi-plus"></i> Add
+                </button>
+            </div>
+
+            <div id="reflectionForm" class="mb-3" style="display:none;">
+                <textarea class="form-control form-control-sm mb-2" id="reflectionContent" rows="3" placeholder="What did you learn?"></textarea>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small">Rating (1-5)</label>
+                        <select class="form-select form-select-sm" id="reflectionRating">
+                            <option value="">-</option>
+                            <option value="1">1 - Poor</option>
+                            <option value="2">2 - Below Avg</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Lesson</label>
+                        <input type="text" class="form-control form-control-sm" id="reflectionLesson" placeholder="Key takeaway">
+                    </div>
+                </div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-info flex-grow-1" onclick="saveReflection({{ trade.id|default(0) }})">Save</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('reflectionForm').style.display='none'">Cancel</button>
+                </div>
+            </div>
+
+            <div id="reflectionsList">
+                {% for r in reflections|default([]) %}
+                <div class="reflection-card" id="reflection-{{ r.id|default(0) }}">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            {% if r.rating|default(0) %}
+                            <span class="text-warning">
+                                {% for i in range(r.rating) %}★{% endfor %}{% for i in range(5 - r.rating) %}☆{% endfor %}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <button class="btn btn-sm text-muted p-0" onclick="deleteReflection({{ r.id|default(0) }})"><i class="bi bi-trash"></i></button>
+                    </div>
+                    <p class="small mb-1 mt-1">{{ r.content|default('') }}</p>
+                    {% if r.lesson|default('') %}
+                    <small class="text-info"><i class="bi bi-lightbulb"></i> {{ r.lesson }}</small>
+                    {% endif %}
+                    <div class="text-muted small mt-1">{{ r.created_at|default('') }}</div>
+                </div>
+                {% endfor %}
+                {% if not reflections|default([]) %}
+                <p class="text-muted small text-center my-3">No reflections yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addTag(tradeId) {
+    var sel = document.getElementById('tagSelect');
+    var tagId = sel.value;
+    if (!tagId) return;
+    fetch('/api/trade/' + tradeId + '/tag', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({tag_id: parseInt(tagId)})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok || d.success) location.reload();
+        else alert(d.error || 'Failed');
+    });
+}
+
+function removeTag(tradeId, tagId) {
+    fetch('/api/trade/' + tradeId + '/tag/' + tagId, { method: 'DELETE' })
+        .then(function(r) { return r.json(); }).then(function(d) {
+            if (d.ok || d.success) location.reload();
+            else alert(d.error || 'Failed');
+        });
+}
+
+function saveReflection(tradeId) {
+    var content = document.getElementById('reflectionContent').value.trim();
+    if (!content) return alert('Content required');
+    var rating = document.getElementById('reflectionRating').value;
+    var lesson = document.getElementById('reflectionLesson').value.trim();
+    fetch('/api/trade/' + tradeId + '/reflection', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ content: content, rating: rating ? parseInt(rating) : null, lesson: lesson || null })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok || d.success) location.reload();
+        else alert(d.error || 'Failed');
+    });
+}
+
+function deleteReflection(id) {
+    if (!confirm('Delete this reflection?')) return;
+    fetch('/api/reflection/' + id, { method: 'DELETE' })
+        .then(function(r) { return r.json(); }).then(function(d) {
+            if (d.ok || d.success) location.reload();
+            else alert(d.error || 'Failed');
+        });
+}
+</script>
+{% endblock %}

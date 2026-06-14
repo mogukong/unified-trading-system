@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}复盘Dashboard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        :root {
+            --bs-body-bg: #1a1a2e;
+            --bs-body-color: #e0e0e0;
+            --accent-primary: #00d4ff;
+            --profit: #00e676;
+            --loss: #ff5252;
+            --card-bg: #16213e;
+            --card-border: #1a365d;
+        }
+        body { background-color: var(--bs-body-bg); color: var(--bs-body-color); font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; }
+        .navbar { background: linear-gradient(135deg, #0f3460, #16213e); border-bottom: 1px solid var(--card-border); }
+        .navbar-brand { font-weight: 700; color: var(--accent-primary) !important; }
+        .nav-link { color: rgba(255,255,255,0.7) !important; }
+        .nav-link:hover, .nav-link.active { color: var(--accent-primary) !important; }
+        .card { background-color: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; }
+        .card-header { background-color: rgba(0,0,0,0.15); border-bottom: 1px solid var(--card-border); }
+        .stat-card { background: linear-gradient(135deg, #16213e, #1a365d); border: 1px solid var(--accent-primary); border-radius: 12px; padding: 20px; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; color: #fff; }
+        .stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; }
+        .pnl-positive { color: var(--profit); font-weight: bold; }
+        .pnl-negative { color: var(--loss); font-weight: bold; }
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; margin: 2px; color: white; }
+        .tag-chip { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
+        .table { --bs-table-bg: transparent; --bs-table-hover-bg: rgba(0,212,255,0.05); color: var(--bs-body-color); }
+        .table th { background-color: rgba(0,0,0,0.2); border-bottom: 2px solid var(--card-border); font-weight: 600; color: rgba(255,255,255,0.8); font-size: 0.75rem; text-transform: uppercase; }
+        .table td { border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
+        .reflection-card { background-color: rgba(0,0,0,0.2); border-left: 4px solid var(--accent-primary); padding: 15px; margin-bottom: 10px; border-radius: 0 8px 8px 0; }
+        .filter-section { background-color: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--card-border); }
+        .chart-container { position: relative; height: 300px; }
+        .form-control, .form-select { background-color: rgba(0,0,0,0.3); border: 1px solid var(--card-border); color: var(--bs-body-color); }
+        .form-control:focus, .form-select:focus { background-color: rgba(0,0,0,0.4); border-color: var(--accent-primary); color: var(--bs-body-color); box-shadow: 0 0 0 0.2rem rgba(0,212,255,0.25); }
+        .badge-win { background-color: var(--profit); color: #000; }
+        .badge-loss { background-color: var(--loss); color: #fff; }
+        .badge-long { background-color: #2196f3; color: #fff; }
+        .badge-short { background-color: #ff9800; color: #fff; }
+        .score-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .score-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><i class="bi bi-graph-up-arrow"></i> Demon Coin Detector</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/"><i class="bi bi-speedometer2"></i> 总览</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/trades' %}active{% endif %}" href="/trades"><i class="bi bi-list-ul"></i> 交易列表</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/analytics' %}active{% endif %}" href="/analytics"><i class="bi bi-bar-chart-line"></i> 分析</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/tags' %}active{% endif %}" href="/tags"><i class="bi bi-tags"></i> 标签管理</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/notes' %}active{% endif %}" href="/notes"><i class="bi bi-journal-text"></i> 复盘笔记</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div style="background:rgba(0,0,0,0.3);border-top:1px solid var(--card-border);padding:10px 0;margin-top:40px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.8rem;">
+        Demon Coin Detector &copy; 2026 | Powered by AI Trading Intelligence
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        Chart.defaults.color = '#e0e0e0';
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
+
+        function formatPnl(pnl) {
+            if (pnl === null || pnl === undefined) return '-';
+            const prefix = pnl >= 0 ? '+' : '';
+            return prefix + Number(pnl).toFixed(2) + 'U';
+        }
+
+        function formatPct(pct) {
+            if (pct === null || pct === undefined) return '-';
+            return Number(pct).toFixed(2) + '%';
+        }
+
+        function showToast(type, message) {
+            let c = document.getElementById('toast-container');
+            if (!c) { c = document.createElement('div'); c.id = 'toast-container'; c.className = 'toast-container position-fixed top-0 end-0 p-3'; c.style.zIndex = '9999'; document.body.appendChild(c); }
+            const t = document.createElement('div');
+            t.className = 'toast align-items-center text-bg-' + type + ' border-0 show';
+            t.setAttribute('role', 'alert');
+            t.innerHTML = '<div class="d-flex"><div class="toast-body">' + message + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+            c.appendChild(t);
+            setTimeout(function() { t.remove(); }, 4000);
+        }
+
+        function syncData() {
+            if (confirm('确定要同步最新交易数据吗？')) {
+                fetch('/api/sync', { method: 'POST' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) {
+                        if (d.ok || d.success) { showToast('success', d.message || '同步完成'); setTimeout(function() { location.reload(); }, 1000); }
+                        else showToast('danger', '同步失败: ' + (d.error || 'unknown'));
+                    })
+                    .catch(function(e) { showToast('danger', '请求失败: ' + e); });
+            }
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

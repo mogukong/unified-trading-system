@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Tags - Demon Coin Detector{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-tags"></i> Tag Management</h2>
+    <button class="btn btn-outline-info" onclick="document.getElementById('createTagForm').style.display = document.getElementById('createTagForm').style.display === 'none' ? 'block' : 'none'">
+        <i class="bi bi-plus-lg"></i> New Tag
+    </button>
+</div>
+
+<!-- Create Tag Form -->
+<div class="card p-3 mb-3" id="createTagForm" style="display:none;">
+    <h6>Create New Tag</h6>
+    <div class="row g-2 mt-1">
+        <div class="col-md-3">
+            <label class="form-label small">Name *</label>
+            <input type="text" class="form-control form-control-sm" id="newTagName" placeholder="Tag name">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Category</label>
+            <select class="form-select form-select-sm" id="newTagCategory">
+                <option value="setup">Setup</option>
+                <option value="mistake">Mistake</option>
+                <option value="emotion">Emotion</option>
+                <option value="market">Market</option>
+                <option value="strategy">Strategy</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Color</label>
+            <input type="color" class="form-control form-control-sm form-control-color" id="newTagColor" value="#3366cc">
+        </div>
+        <div class="col-md-1">
+            <label class="form-label small">Icon</label>
+            <input type="text" class="form-control form-control-sm" id="newTagIcon" placeholder="🎯" maxlength="4">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Description</label>
+            <input type="text" class="form-control form-control-sm" id="newTagDesc" placeholder="Optional description">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button class="btn btn-sm btn-outline-info w-100" onclick="createTag()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Tags by Category -->
+{% set tbc = tags_by_category|default({}) %}
+{% for cat in tbc %}
+{% set cat_tags = tbc[cat] %}
+<div class="card p-3 mb-3">
+    <h6 class="text-capitalize"><i class="bi bi-folder"></i> {{ cat }} <span class="badge bg-secondary">{{ cat_tags|default([])|length }}</span></h6>
+    <div class="table-responsive mt-2">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th style="width:40px"></th>
+                    <th>Tag</th>
+                    <th>Description</th>
+                    <th>Trades</th>
+                    <th>Win Rate</th>
+                    <th>Total PnL</th>
+                    <th>Avg PnL</th>
+                    <th style="width:60px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tag in cat_tags %}
+                {% set tc = tag.trade_count|default(0) or 0 %}
+                {% set tw = tag.wins|default(0) or 0 %}
+                {% set wr = ((tw / tc * 100)|round(1)) if tc > 0 else 0 %}
+                {% set pnl = tag.total_pnl|default(0) or 0 %}
+                {% set apnl = ((pnl / tc)|round(2)) if tc > 0 else 0 %}
+                <tr>
+                    <td><span class="d-inline-block rounded" style="width:16px;height:16px;background:{{ tag.color|default('#333') }};"></span></td>
+                    <td>
+                        <span class="tag-chip" style="background:{{ tag.color|default('#333') }}; color:#fff;">
+                            {{ tag.icon|default('') }} {{ tag.name|default('') }}
+                        </span>
+                    </td>
+                    <td class="small text-muted">{{ tag.description|default('') }}</td>
+                    <td>{{ tc }}</td>
+                    <td><span class="{% if wr >= 50 %}pnl-positive{% else %}pnl-negative{% endif %}">{{ "%.1f"|format(wr) }}%</span></td>
+                    <td><span class="{% if pnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">${{ "%.2f"|format(pnl) }}</span></td>
+                    <td><span class="{% if apnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">${{ "%.2f"|format(apnl) }}</span></td>
+                    <td>
+                        <button class="btn btn-sm text-muted p-0" onclick="deleteTag({{ tag.id|default(0) }})" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+{% if not tags_by_category|default({}) %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-tags" style="font-size: 3rem;"></i>
+    <p class="mt-2">No tags created yet. Click "New Tag" to get started.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function createTag() {
+    var name = document.getElementById('newTagName').value.trim();
+    if (!name) return alert('Name is required');
+    fetch('/api/tag', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            name: name,
+            category: document.getElementById('newTagCategory').value,
+            color: document.getElementById('newTagColor').value,
+            icon: document.getElementById('newTagIcon').value,
+            description: document.getElementById('newTagDesc').value.trim()
+        })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.ok || d.success) location.reload();
+        else alert(d.error || 'Failed to create tag');
+    });
+}
+
+function deleteTag(id) {
+    if (!confirm('Delete this tag? It will be removed from all trades.')) return;
+    fetch('/api/tag/' + id, { method: 'DELETE' })
+        .then(function(r) { return r.json(); }).then(function(d) {
+            if (d.ok || d.success) location.reload();
+            else alert(d.error || 'Failed');
+        });
+}
+</script>
+{% endblock %}

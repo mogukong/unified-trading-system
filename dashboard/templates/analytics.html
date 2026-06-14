@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Analytics - Demon Coin Detector{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-graph-up"></i> Deep Analytics</h2>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-label">Profit Factor</div>
+            <div class="stat-value {% if stats.profit_factor|default(0) >= 1 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                {{ "%.2f"|format(stats.profit_factor|default(0)) }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-label">Avg Win</div>
+            <div class="stat-value pnl-positive">${{ "%.2f"|format(stats.avg_win|default(0)) }}</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-label">Avg Loss</div>
+            <div class="stat-value pnl-negative">${{ "%.2f"|format(stats.avg_loss|default(0)) }}</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-label">Max Drawdown</div>
+            <div class="stat-value pnl-negative">${{ "%.2f"|format(stats.max_dd|default(0)) }}</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-label">Avg Hold (h)</div>
+            <div class="stat-value">{{ "%.1f"|format(stats.avg_hold|default(0)) }}</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="stat-card">
+            <div class="stat-label">Total Trades</div>
+            <div class="stat-value">{{ stats.total_trades|default(0) }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6><i class="bi bi-bar-chart"></i> Score Distribution</h6>
+            <div class="chart-container"><canvas id="scoreDistChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6><i class="bi bi-clock"></i> PnL by Hour (UTC)</h6>
+            <div class="chart-container"><canvas id="pnlByHourChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6><i class="bi bi-calendar-week"></i> PnL by Weekday</h6>
+            <div class="chart-container"><canvas id="pnlByWeekdayChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6><i class="bi bi-box-arrow-right"></i> Exit Type Distribution</h6>
+            <div class="chart-container"><canvas id="exitTypeChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 3 -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6><i class="bi bi-scatter-chart"></i> Score vs PnL</h6>
+            <div class="chart-container"><canvas id="scoreVsPnlChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h6><i class="bi bi-exclamation-triangle"></i> Loss Tag Frequency</h6>
+            <div class="chart-container"><canvas id="lossTagChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Tag Performance Table -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card p-3">
+            <h6><i class="bi bi-tags"></i> Tag Performance</h6>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr><th>Tag</th><th>Trades</th><th>Wins</th><th>Win Rate</th><th>Total PnL</th><th>Avg PnL</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tag_perf|default([]) %}
+                        {% set tc = t.trades|default(0) %}
+                        {% set tw = t.wins|default(0) %}
+                        {% set wr = (tw / tc * 100) if tc > 0 else 0 %}
+                        {% set pnl = t.total_pnl|default(0) %}
+                        {% set apnl = (pnl / tc) if tc > 0 else 0 %}
+                        <tr>
+                            <td><span class="tag-chip" style="background:{{ t.color|default('#333') }};color:#fff;">{{ t.name|default('') }}</span></td>
+                            <td>{{ tc }}</td>
+                            <td class="pnl-positive">{{ tw }}</td>
+                            <td class="{% if wr >= 50 %}pnl-positive{% else %}pnl-negative{% endif %}">{{ "%.1f"|format(wr) }}%</td>
+                            <td class="{% if pnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">${{ "%.2f"|format(pnl) }}</td>
+                            <td class="{% if apnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">${{ "%.2f"|format(apnl) }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not tag_perf|default([]) %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">No tag data</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Score Bands Table -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card p-3">
+            <h6><i class="bi bi-speedometer2"></i> Performance by Score Band</h6>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr><th>Band</th><th>Trades</th><th>Wins</th><th>Win Rate</th><th>Total PnL</th><th>Avg PnL</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in score_dist|default([]) %}
+                        {% set dc = d.trades|default(0) %}
+                        {% set dw = d.wins|default(0) %}
+                        {% set dwr = (dw / dc * 100) if dc > 0 else 0 %}
+                        {% set dpnl = d.pnl|default(0) %}
+                        {% set dapnl = (dpnl / dc) if dc > 0 else 0 %}
+                        <tr>
+                            <td>{{ d.band|default('') }}</td>
+                            <td>{{ dc }}</td>
+                            <td class="pnl-positive">{{ dw }}</td>
+                            <td class="{% if dwr >= 50 %}pnl-positive{% else %}pnl-negative{% endif %}">{{ "%.1f"|format(dwr) }}%</td>
+                            <td class="{% if dpnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">${{ "%.2f"|format(dpnl) }}</td>
+                            <td class="{% if dapnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">${{ "%.2f"|format(dapnl) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Score Distribution
+(function() {
+    var sd = {{ score_dist|default([])|tojson }};
+    if (sd.length > 0) {
+        new Chart(document.getElementById('scoreDistChart'), {
+            type: 'bar',
+            data: {
+                labels: sd.map(function(d) { return d.band || ''; }),
+                datasets: [{ label: 'Trades', data: sd.map(function(d) { return d.trades || 0; }), backgroundColor: 'rgba(100,181,246,0.6)', borderRadius: 4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true } }
+            }
+        });
+    }
+})();
+
+// PnL by Hour
+(function() {
+    var hd = {{ by_hour|default([])|tojson }};
+    if (hd.length > 0) {
+        var hours = [];
+        var hourData = [];
+        for (var i = 0; i < 24; i++) { hours.push(i + ':00'); hourData.push(0); }
+        hd.forEach(function(d) {
+            var h = d.hour !== undefined ? d.hour : parseInt(d.label);
+            if (h >= 0 && h < 24) hourData[h] = d.pnl || 0;
+        });
+        new Chart(document.getElementById('pnlByHourChart'), {
+            type: 'bar',
+            data: {
+                labels: hours,
+                datasets: [{
+                    label: 'PnL',
+                    data: hourData,
+                    backgroundColor: hourData.map(function(v) { return v >= 0 ? 'rgba(0,200,83,0.6)' : 'rgba(255,23,68,0.6)'; }),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }
+            }
+        });
+    }
+})();
+
+// PnL by Weekday
+(function() {
+    var wd = {{ by_weekday|default([])|tojson }};
+    if (wd.length > 0) {
+        var weekdayData = [0,0,0,0,0,0,0];
+        wd.forEach(function(d) {
+            var day = d.dow !== undefined ? d.dow : parseInt(d.label);
+            if (day >= 0 && day < 7) weekdayData[day] = d.pnl || 0;
+        });
+        new Chart(document.getElementById('pnlByWeekdayChart'), {
+            type: 'bar',
+            data: {
+                labels: DAYS,
+                datasets: [{
+                    label: 'PnL',
+                    data: weekdayData,
+                    backgroundColor: weekdayData.map(function(v) { return v >= 0 ? 'rgba(0,200,83,0.6)' : 'rgba(255,23,68,0.6)'; }),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }
+            }
+        });
+    }
+})();
+
+// Exit Type Distribution
+(function() {
+    var et = {{ exit_types|default([])|tojson }};
+    if (et.length > 0) {
+        var colors = ['#64b5f6', '#00c853', '#ff1744', '#ff9800', '#ab47bc', '#26c6da', '#8d6e63'];
+        new Chart(document.getElementById('exitTypeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: et.map(function(d) { return d.exit_type || d.label || ''; }),
+                datasets: [{ data: et.map(function(d) { return d.count || 0; }), backgroundColor: colors.slice(0, et.length), borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '55%' }
+        });
+    }
+})();
+
+// Score vs PnL Scatter
+(function() {
+    var sc = {{ scatter|default([])|tojson }};
+    if (sc.length > 0) {
+        new Chart(document.getElementById('scoreVsPnlChart'), {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Trades',
+                    data: sc.map(function(d) { return {x: d.total_score || 0, y: d.pnl_usd || 0}; }),
+                    backgroundColor: sc.map(function(d) { return (d.pnl_usd || 0) >= 0 ? 'rgba(0,200,83,0.6)' : 'rgba(255,23,68,0.6)'; }),
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: 'Score' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { title: { display: true, text: 'PnL ($)' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    }
+})();
+
+// Loss Tag Frequency
+(function() {
+    var lt = {{ loss_tags|default([])|tojson }};
+    if (lt.length > 0) {
+        // loss_tags is list of [tag_name, {count, pnl}] tuples
+        var labels = lt.map(function(d) { return Array.isArray(d) ? d[0] : (d.tag || d.label || ''); });
+        var counts = lt.map(function(d) { return Array.isArray(d) ? (d[1] ? d[1].count || 0 : 0) : (d.count || 0); });
+        new Chart(document.getElementById('lossTagChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ label: 'Occurrences', data: counts, backgroundColor: 'rgba(255,23,68,0.6)', borderRadius: 4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                indexAxis: 'y',
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}
