@@ -48,7 +48,7 @@ if not BINANCE_API_KEY or not BINANCE_API_SECRET:
     print("ERROR: BINANCE_API_KEY or BINANCE_API_SECRET missing in .env")
     sys.exit(1)
 
-print(f"✅ API keys loaded (key={BINANCE_API_KEY[:8]}...)")
+print("✅ API keys loaded")
 
 # ============================================================
 # Proxy + API helpers

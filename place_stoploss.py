@@ -14,7 +14,7 @@ result = subprocess.run(
     ['python3', '-c', '''
 import json
 keys = {}
-with open("/tmp/demon-coin-detector/.env") as f:
+with open("./.env") as f:
     for line in f:
         line = line.strip()
         if "=" in line and not line.startswith("#"):
@@ -28,8 +28,8 @@ env = json.loads(result.stdout)
 api_key = env.get('BINANCE_API_KEY', '')
 api_secret = env.get('BINANCE_API_SECRET', '')
 
-print(f"API Key loaded: {api_key[:8]}...")
-print(f"API Secret loaded: {api_secret[:8]}...")
+print("API Key loaded: OK")
+print("API Secret loaded: OK")
 
 
 def try_order(endpoint, params, method='POST'):
